@@ -10,3 +10,6 @@ requests
 pdfplumber
 deep-translator
 easyocr
+fastapi
+uvicorn
+python-multipart

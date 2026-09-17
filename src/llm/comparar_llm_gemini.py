@@ -18,7 +18,8 @@ from google import genai
 from google.genai import types
 
 # Importa o novo módulo de prompts compartilhado
-# Precisamos adicionar o diretório src ao path se rodado do raiz ou como script isolado
+# sys.path.insert(0, ...) garante que o Python encontre a pasta "src" como um módulo raiz,
+# permitindo que importemos o pacote local (src.llm.prompts) mesmo executando este script isoladamente do terminal.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.llm.prompts import montar_prompt_simplificacao, BulaSimplificada
 
@@ -42,12 +43,15 @@ def carregar_env() -> None:
     if not arquivo.exists():
         return
 
+    # Lemos linha a linha do .env e populamos os.environ manualmente
+    # Isso permite usar variáveis sensíveis (API Keys) sem commitá-las no código fonte.
     for linha in arquivo.read_text(encoding="utf-8").splitlines():
         linha = linha.strip()
         if not linha or linha.startswith("#") or "=" not in linha:
             continue
         chave, _, valor = linha.partition("=")
         chave = chave.strip()
+        # Removemos aspas duplas ou simples que as pessoas costumam colocar no .env
         valor = valor.strip().strip('"').strip("'")
         if chave and chave not in os.environ:
             os.environ[chave] = valor
@@ -81,14 +85,17 @@ def reconstruir_bula_com_gemini(
     print(f"Enviando texto para o modelo '{modelo}' usando o prompt centralizado...")
 
     try:
+        # Instanciação simplificada do GenAI. O SDK novo abstrai toda a camada REST e chamadas HTTP.
         client = genai.Client(api_key=chave_api)
+        
+        # generate_content faz a chamada efetiva à API. O schema força a saída em JSON tipado.
         resposta = client.models.generate_content(
             model=modelo,
             contents=montar_prompt_simplificacao(texto_bula),
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=BulaSimplificada,
-                temperature=0.1,  # Baixa temperatura para minimizar alucinações
+                temperature=0.1,  # Baixa temperatura para minimizar alucinações (foco determinístico)
             ),
         )
     except Exception as e:
@@ -101,6 +108,7 @@ def reconstruir_bula_com_gemini(
         return None
 
     try:
+        # Converte a resposta em string para dicionário e depois refaz em JSON bonito (indent=2)
         json_obj = json.loads(texto_resposta)
         texto_resposta = json.dumps(json_obj, ensure_ascii=False, indent=2)
     except json.JSONDecodeError:

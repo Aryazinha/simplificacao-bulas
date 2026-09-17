@@ -1,7 +1,10 @@
 import json
 from pydantic import BaseModel, Field
 
-# Schema Pydantic opcional (útil para uso no Gemini SDK recente)
+# Schema Pydantic. Pydantic é uma biblioteca que aplica tipagem estática e validação de dados em runtime.
+# Ao criar uma classe que herda de `BaseModel`, conseguimos garantir o formato de saída do JSON.
+# `Field(description=...)` é crucial aqui: ele envia a descrição diretamente para a API do Gemini (Structured Output),
+# atuando como instruções nativas e embutidas para a IA sobre como preencher cada campo.
 class BulaSimplificada(BaseModel):
     indicacao: str = Field(description="1. Para que este medicamento é indicado?")
     funcionamento: str = Field(description="2. Como este medicamento funciona?")
@@ -16,6 +19,11 @@ class BulaSimplificada(BaseModel):
     avisos_seguranca: str = Field(description="Alertas obrigatórios (ex: 'Não se automedique', 'Converse com seu médico').")
 
 
+# O Prompt de Sistema (System Prompt) engloba:
+# - A persona (médico focado em linguagem leiga)
+# - Restrições críticas de alucinação (para evitar riscos de saúde).
+# - Few-Shot (Exemplo de Simplificação): Ajuda o modelo a entender o "tom" de voz exigido.
+# - Chain-of-Thought (Pensamento Passo a Passo): Obriga a IA a estruturar o raciocínio antes de extrair os dados.
 PROMPT_SISTEMA_BULA = """Você é um especialista médico focado em comunicação clara e acessível em saúde para pacientes leigos.
 Sua tarefa é ler um texto extraído por OCR de uma bula de medicamento e simplificá-lo de forma segura e estruturada, 
 atendendo às diretrizes da ANVISA (RDC nº 47/2009 da Bula do Paciente).
@@ -48,5 +56,8 @@ TEXTO EXTRAÍDO PELO OCR:
 """
 
 def montar_prompt_simplificacao(texto_bula: str) -> str:
-    """Preenche o template com o texto da bula e retorna o prompt completo."""
+    """
+    Preenche o template de string com o texto da bula e retorna o prompt completo.
+    str.format() substitui o placeholder `{texto_bula}` no template pela variável recebida.
+    """
     return PROMPT_SISTEMA_BULA.format(texto_bula=texto_bula)
