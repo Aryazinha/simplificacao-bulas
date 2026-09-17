@@ -1,0 +1,12 @@
+# Dependências dos experimentos. Instale com: pip install -r requirements.txt
+# O Tesseract-OCR e o Ollama são programas externos e precisam ser instalados à parte.
+
+opencv-python
+pytesseract
+jiwer
+google-genai
+ollama
+requests
+pdfplumber
+deep-translator
+easyocr

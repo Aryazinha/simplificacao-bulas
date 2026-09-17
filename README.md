@@ -56,19 +56,53 @@ Os scripts usam caminhos relativos e devem ser executados a partir da raiz do pr
 python src/ocr/bula.py
 ```
 
+Os caminhos são resolvidos a partir da raiz do projeto, então os scripts também
+funcionam quando chamados de outro diretório. Todos aceitam `--help`.
+
 ## Requisitos
 
 - Python 3
 - [Tesseract-OCR](https://github.com/tesseract-ocr/tesseract) instalado localmente
-- Bibliotecas Python: `opencv-python`, `pytesseract`, `jiwer`, `google-genai`, `ollama`, `requests`, `pdfplumber`, `deep-translator`
+- Dependências Python: `pip install -r requirements.txt`
 - [Ollama](https://ollama.com/) rodando localmente, com os modelos usados em [src/llm/testar_llm.py](src/llm/testar_llm.py) baixados
 
 ## Configuração
 
-Copie `.env.example` para `.env` e preencha sua chave da API do Gemini:
+Copie `.env.example` para `.env` e preencha os valores. Os scripts carregam esse
+arquivo automaticamente (sem sobrescrever variáveis já definidas no ambiente):
 
 ```
 GEMINI_API_KEY=sua_chave_aqui
+GEMINI_MODEL=gemini-2.5-flash
+TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe
 ```
 
-O script [src/llm/comparar_llm_gemini.py](src/llm/comparar_llm_gemini.py) lê essa chave pela variável de ambiente `GEMINI_API_KEY`.
+`GEMINI_MODEL` e `TESSERACT_CMD` são opcionais: o modelo tem um padrão embutido e,
+sem `TESSERACT_CMD`, usa-se o `tesseract` disponível no PATH.
+
+## Fluxo de uso
+
+```
+python src/ocr/bula.py                                    # foto -> resultados/bula_extraida.txt
+python src/comparacao/comparar_ocr.py                     # CER do OCR bruto
+python src/llm/comparar_llm_gemini.py                     # reconstrução via Gemini
+python src/llm/testar_llm.py --modelo qwen2.5vl:7b        # reconstrução via Ollama
+python src/comparacao/comparar_llm.py resultados/resultado_gemini.txt --modelo Gemini
+```
+
+## Medição de precisão (CER)
+
+[src/comparacao/comparar_llm.py](src/comparacao/comparar_llm.py) recebe o arquivo a
+medir como argumento e grava o nome do modelo informado em
+`resultados/historico_resultados.txt`, de modo que cada linha do histórico
+corresponda ao arquivo efetivamente comparado.
+
+Antes de calcular o CER, os textos passam por uma normalização que remove marcação
+Markdown (negrito, títulos, marcadores de lista, blocos de código) e uniformiza
+espaços. As LLMs devolvem o texto formatado e o gabarito não é formatado; sem essa
+etapa, a formatação entra na conta como erro de reconstrução. Use `--bruto` para
+comparar sem normalizar.
+
+> As linhas do histórico anteriores a esta mudança foram geradas com o arquivo e o
+> nome do modelo fixos no código, e sem normalização — não são comparáveis diretamente
+> com as linhas novas, que trazem o sufixo `| Texto: normalizado`.

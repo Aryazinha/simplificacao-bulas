@@ -1,0 +1,57 @@
+{
+  "indicacao": {
+    "cosseno_maximo": 0.4829,
+    "veredito_factual": "Aprovado",
+    "divergencias": []
+  },
+  "funcionamento": {
+    "cosseno_maximo": 0.6263,
+    "veredito_factual": "Aprovado",
+    "divergencias": []
+  },
+  "contraindicacoes": {
+    "cosseno_maximo": 0.5037,
+    "veredito_factual": "Aprovado",
+    "divergencias": []
+  },
+  "precaucoes_populacoes_especiais": {
+    "cosseno_maximo": 0.6921,
+    "veredito_factual": "Aprovado",
+    "divergencias": []
+  },
+  "interacoes_medicamentosas": {
+    "cosseno_maximo": 0.4501,
+    "veredito_factual": "Aprovado",
+    "divergencias": []
+  },
+  "armazenamento": {
+    "cosseno_maximo": 0.1259,
+    "veredito_factual": "Aprovado",
+    "divergencias": []
+  },
+  "posologia_uso": {
+    "cosseno_maximo": 0.762,
+    "veredito_factual": "Aprovado",
+    "divergencias": []
+  },
+  "esquecimento": {
+    "cosseno_maximo": 0.7902,
+    "veredito_factual": "Aprovado",
+    "divergencias": []
+  },
+  "efeitos_colaterais": {
+    "cosseno_maximo": 0.5599,
+    "veredito_factual": "Aprovado",
+    "divergencias": []
+  },
+  "superdose": {
+    "cosseno_maximo": 0.5446,
+    "veredito_factual": "Aprovado",
+    "divergencias": []
+  },
+  "avisos_seguranca": {
+    "cosseno_maximo": 0.6127,
+    "veredito_factual": "Aprovado",
+    "divergencias": []
+  }
+}

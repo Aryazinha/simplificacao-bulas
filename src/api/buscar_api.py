@@ -1,10 +1,21 @@
 import requests
 import sys
+from pathlib import Path
+
 import pdfplumber
 from deep_translator import GoogleTranslator
 
-if sys.stdout.encoding != 'utf-8':
+RAIZ = Path(__file__).resolve().parents[2]
+TIMEOUT_SEGUNDOS = 20
+
+if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
     sys.stdout.reconfigure(encoding='utf-8')
+
+
+def caminho(valor: str) -> Path:
+    """Resolve caminhos relativos a partir da raiz do projeto, não do cwd."""
+    p = Path(valor)
+    return p if p.is_absolute() else RAIZ / p
 
 def traduzir_texto(texto: str) -> str:
     try:
@@ -18,7 +29,7 @@ def buscar_bula_api(nome_ingles: str, nome_portugues: str) -> dict:
     url = f'https://api.fda.gov/drug/label.json?search=active_ingredient:"{nome_ingles}"&limit=1'
 
     try:
-        resposta = requests.get(url)
+        resposta = requests.get(url, timeout=TIMEOUT_SEGUNDOS)
         resposta.raise_for_status()  
 
         dados_json = resposta.json()
@@ -64,8 +75,8 @@ def extrair_texto_bula(caminho_pdf: str) -> str:
     texto_completo = ""
     
     try:
-        with pdfplumber.open(caminho_pdf) as pdf:
-            for i, pagina in enumerate(pdf.pages):
+        with pdfplumber.open(caminho(caminho_pdf)) as pdf:
+            for pagina in pdf.pages:
                 texto_pagina = pagina.extract_text()
                 
                 if texto_pagina:

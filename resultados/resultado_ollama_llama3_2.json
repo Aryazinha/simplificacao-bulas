@@ -1,0 +1,48 @@
+{
+  "indicacao": "Tratamento dos sintomas de gripes e resfriados, alívio da congestão nasal, coriza, febre, dor de cabeça e dor muscular.",
+  "funcionamento": "Atua a nível de Sistema Nervoso Central, promovendo a diminuição da febre e reduzindo os efeitos alérgicos.",
+  "contraindicacoes": [
+    "Hipersensibilidade aos componentes da fórmula",
+    "Pressão alta",
+    "Doença cardíaca",
+    "Diabetes",
+    "Glaucoma",
+    "Hypertrofia da próstata",
+    "Doença renal crônica",
+    "Insuficiência hepática grave",
+    "Disfunção tireoidiana",
+    "Gravidez e lactação sem controle médico",
+    "Idosos com problemas de saúde",
+    "Crianças menores de 18 anos"
+  ],
+  "precaucoes_populacoes_especiais": [
+    "Gestantes: não deve ser utilizado sem orientação médica ou do cirurgião-dentista",
+    "Lactantes: não deve ser utilizado",
+    "Idosos: é recomendado uso sob orientação médica",
+    "Crianças menores de 18 anos: não deve ser utilizado",
+    "Diabéticos: deve ser utilizado com cuidado e acompanhamento médico",
+    "Pessoas com problemas de saúde: deve ser utilizado com cautela e orientação médica"
+  ],
+  "interacoes_medicamentosas": [
+    "Inibidores da MAO (monoa-minoxidase)",
+    "Barbitúricos",
+    "Álcool"
+  ],
+  "armazenamento": "Deve ser conservado em temperatura ambiente, protegido da luz e umidade",
+  "posologia_uso": "Cada cápsula contém 4 mg de cloridrato de fenilefrina, paracetamol 400 mg e maleato de clorfeniramina 4 mg",
+  "esquecimento": "Não esqueça de tomar o medicamento conforme prescrito pelo médico",
+  "efeitos_colaterais": [
+    "Efeitos alérgicos",
+    "Edema",
+    "Coriza",
+    "Rinite"
+  ],
+  "superdose": "Não exceda a dose máxima recomendada",
+  "avisos_seguranca": [
+    "Não use medicamento com prazo de validade expirado",
+    "Não use medicamento com aspecto alterado",
+    "Não use medicamento com prazo de validade vencido",
+    "Não compartilhe medicamento com outras pessoas",
+    "Não use medicamento com prazo de validade expirado ou alterado"
+  ]
+}

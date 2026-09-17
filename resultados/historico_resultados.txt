@@ -22,3 +22,6 @@
 [2026-07-11 22:15:54] Modelo: Claude | CER: 0.0992 | Precisão: 90.08%
 [2026-07-11 22:16:48] Modelo: Claude | CER: 0.0874 | Precisão: 91.26%
 [2026-07-11 22:18:10] Modelo: Claude | CER: 0.1259 | Precisão: 87.41%
+[2026-08-13 23:01:25] Modelo: Qwen2.5 | CER: 0.1451 | Precisão: 85.49% | Texto: normalizado
+[2026-08-13 23:06:54] Modelo: llama3.2 | CER: 0.1784 | Precisão: 82.16% | Texto: normalizado
+[2026-08-13 23:19:38] Modelo: granite3.2 | CER: 0.2112 | Precisão: 78.88% | Texto: normalizado

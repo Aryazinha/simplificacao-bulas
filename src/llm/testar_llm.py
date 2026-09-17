@@ -1,100 +1,133 @@
-import ollama
+"""Reconstrói, via Ollama local, o texto de bula extraído pelo OCR.
+
+Sem argumentos, pergunta o modelo no terminal; com --modelo, roda sem interação.
+
+Exemplos:
+    python src/llm/testar_llm.py
+    python src/llm/testar_llm.py --modelo qwen2.5vl:7b
+"""
+
+import argparse
 import sys
-import os
+import json
+import re
+from pathlib import Path
 
-if sys.stdout.encoding != 'utf-8':
-    sys.stdout.reconfigure(encoding='utf-8')
+import ollama
+
+# Importa o novo módulo de prompts compartilhado
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from src.llm.prompts import montar_prompt_simplificacao
+
+RAIZ = Path(__file__).resolve().parents[2]
+ENTRADA_PADRAO = "resultados/bula_extraida.txt"
+PASTA_SAIDA = "resultados"
+
+MODELOS = {
+    "1": "qwen2.5vl:7b",
+    "2": "llama3.2",
+    "3": "granite3.2",
+}
+
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")
 
 
-def escolher_modelo_ollama() -> str:
+def caminho(*partes: str) -> Path:
+    """Resolve caminhos relativos a partir da raiz do projeto, não do cwd."""
+    p = Path(*partes)
+    return p if p.is_absolute() else RAIZ / p
 
+
+def escolher_modelo_ollama() -> str | None:
     print("Modelos disponíveis no Ollama:")
-    print("1 - qwen2.5vl:7b")
-    print("2 - llama3.2")
-    print("3 - granite3.2")
+    for opcao, nome in MODELOS.items():
+        print(f"{opcao} - {nome}")
 
-    modelos = {
-        "1": "qwen2.5vl:7b",
-        "2": "llama3.2",
-        "3": "granite3.2"
-    }
+    escolha = input("Escolha um modelo: ").strip()
 
-    opcao = input("Escolha um modelo: ")
-
-    if opcao not in modelos:
+    if escolha not in MODELOS:
         print("Opção inválida.")
         return None
 
-    return modelos.get(opcao)
+    return MODELOS[escolha]
 
-def extrair_dados_com_ollama() -> str:
 
-    modelo = escolher_modelo_ollama()
-
-    if not modelo:
-        print("Nenhum modelo válido foi escolhido.")
-        return None
-
+def extrair_dados_com_ollama(modelo: str, arquivo_ocr: str = ENTRADA_PADRAO) -> str | None:
     print(f"Modelo escolhido: {modelo}")
-    
-    arquivo_ocr = "resultados/bula_extraida.txt"
 
-    if not os.path.exists(arquivo_ocr):
-        print(f"Arquivo '{arquivo_ocr}' não encontrado. Execute o OCR primeiro.")
+    caminho_ocr = caminho(arquivo_ocr)
+    if not caminho_ocr.exists():
+        print(f"Arquivo '{caminho_ocr}' não encontrado. Execute o OCR primeiro.")
         return None
-    
-    with open(arquivo_ocr, "r", encoding="utf-8") as f:
-        texto_bula = f.read()
 
-    prompt = f"""
-        Você recebeu um texto extraído por OCR de uma bula de medicamento.
+    texto_bula = caminho_ocr.read_text(encoding="utf-8")
+    if not texto_bula.strip():
+        print(f"Arquivo '{caminho_ocr}' está vazio.")
+        return None
 
-        O texto pode conter erros de reconhecimento de caracteres, palavras incompletas,
-        linhas quebradas e problemas de formatação causados pelo processo de OCR.
+    print(f"Enviando texto para o modelo '{modelo}' usando o prompt centralizado...")
 
-        Sua tarefa é reconstruir o texto da bula da forma mais fiel possível ao documento original.
-
-        REGRAS OBRIGATÓRIAS:
-
-        - Responda exclusivamente em Português do Brasil.
-        - Corrija apenas erros evidentes causados pelo OCR.
-        - Não invente informações que não estejam presentes no texto.
-        - Não utilize conhecimento prévio sobre o medicamento.
-        - Não resuma o conteúdo.
-        - Não omita nenhuma informação.
-        - Preserve a estrutura da bula sempre que possível.
-        - Preserve títulos, subtítulos, listas e ordem das informações.
-        - Caso alguma palavra esteja ilegível ou não possa ser determinada com segurança, mantenha-a como foi reconhecida pelo OCR.
-
-        Texto obtido pelo OCR:
-
-        {texto_bula}
-        """
-        # "Símbolos soltos, barras (|), pontos de exclamação no início de frases ou caracteres aleatórios gerados por ruído na imagem devem ser ignorados e removidos."
     try:
+        # ollama.chat suporta format="json" em versões recentes
         resposta = ollama.chat(
             model=modelo,
-            messages=[
-                {"role": "user", "content": prompt} # "o usuário escreveu isso"
-            ]
+            messages=[{"role": "user", "content": montar_prompt_simplificacao(texto_bula)}],
+            format="json",
+            options={"temperature": 0.1}
         )
     except Exception as e:
         print(f"Erro ao se comunicar com o Ollama: {e}")
         return None
 
-    nome_arquivo_saida = f"resultados/resultado_ollama_{modelo.replace(':', '_').replace('.', '_')}.txt"
     texto_resposta = resposta["message"]["content"].strip()
+    if not texto_resposta:
+        print("O modelo retornou uma resposta vazia.")
+        return None
 
-    with open(nome_arquivo_saida, "w", encoding="utf-8") as f:
-        f.write(texto_resposta)
+    # Tenta limpar e reformatar o JSON para garantir legibilidade
+    try:
+        # Tenta encontrar bloco json caso o modelo tenha ignorado format="json"
+        match = re.search(r'```json\s*(.*?)\s*```', texto_resposta, re.DOTALL)
+        if match:
+            texto_resposta = match.group(1)
+        
+        json_obj = json.loads(texto_resposta)
+        texto_resposta = json.dumps(json_obj, ensure_ascii=False, indent=2)
+    except json.JSONDecodeError:
+        print("Aviso: O modelo não retornou um JSON válido.")
 
-    print(f"Resultado salvo em '{nome_arquivo_saida}'")
+    sufixo = modelo.replace(":", "_").replace(".", "_")
+    destino = caminho(PASTA_SAIDA, f"resultado_ollama_{sufixo}.json")
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    destino.write_text(texto_resposta, encoding="utf-8")
 
+    print(f"Resultado salvo em '{destino}'")
     return texto_resposta
 
-if __name__ == "__main__":
-    resultado = extrair_dados_com_ollama()
 
-    if resultado:
-        print("Dados extraídos com sucesso:")
-        print(resultado)
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--modelo",
+        help=f"Nome do modelo no Ollama. Sugestões: {', '.join(MODELOS.values())}.",
+    )
+    parser.add_argument("--entrada", default=ENTRADA_PADRAO, help="Texto extraído pelo OCR.")
+    args = parser.parse_args()
+
+    modelo = args.modelo or escolher_modelo_ollama()
+    if not modelo:
+        print("Nenhum modelo válido foi escolhido.")
+        return 1
+
+    resultado = extrair_dados_com_ollama(modelo, args.entrada)
+    if not resultado:
+        return 1
+
+    print("\n===== BULA SIMPLIFICADA E ESTRUTURADA (JSON) =====\n")
+    print(resultado)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

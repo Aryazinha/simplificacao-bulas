@@ -1,82 +1,140 @@
-from google import genai
-import sys
-import os
+"""Reconstrói, via Gemini, o texto de bula extraído pelo OCR.
 
-# Defina a variável de ambiente GEMINI_API_KEY com sua chave da API
-CHAVE_API = os.environ.get("GEMINI_API_KEY")
+A chave é lida da variável de ambiente GEMINI_API_KEY; se não estiver no ambiente,
+o arquivo .env da raiz do projeto é carregado. O modelo pode ser trocado por
+GEMINI_MODEL ou por --modelo.
 
-if sys.stdout.encoding != 'utf-8':
-    sys.stdout.reconfigure(encoding='utf-8')
-
-
-def reconstruir_bula_com_gemini() -> str:
-
-    arquivo_ocr = "resultados/bula_extraida.txt"
-
-    if not os.path.exists(arquivo_ocr):
-        print(f"Arquivo '{arquivo_ocr}' não encontrado. Execute o OCR primeiro.")
-        return None
-
-    with open(arquivo_ocr, "r", encoding="utf-8") as f:
-        texto_bula = f.read()
-
-    prompt = f"""
-Você recebeu um texto extraído por OCR de uma bula de medicamento.
-
-O texto pode conter erros de reconhecimento de caracteres, palavras incompletas,
-linhas quebradas e problemas de formatação causados pelo processo de OCR.
-
-Sua tarefa é reconstruir o texto da bula da forma mais fiel possível ao documento original.
-
-REGRAS OBRIGATÓRIAS:
-
-- Responda exclusivamente em Português do Brasil.
-- Corrija apenas erros evidentes causados pelo OCR.
-- Não invente informações que não estejam presentes no texto.
-- Não utilize conhecimento prévio sobre o medicamento.
-- Não resuma o conteúdo.
-- Não omita nenhuma informação.
-- Preserve a estrutura da bula sempre que possível.
-- Preserve títulos, subtítulos, listas e ordem das informações.
-- Caso alguma palavra esteja ilegível ou não possa ser determinada com segurança, mantenha-a como foi reconhecida pelo OCR.
-
-Texto obtido pelo OCR:
-
-{texto_bula}
+Exemplo:
+    python src/llm/comparar_llm_gemini.py
 """
 
-    if not CHAVE_API:
-        print("Erro: defina a variável de ambiente GEMINI_API_KEY com sua chave da API.")
+import argparse
+import os
+import sys
+import json
+from pathlib import Path
+
+from google import genai
+from google.genai import types
+
+# Importa o novo módulo de prompts compartilhado
+# Precisamos adicionar o diretório src ao path se rodado do raiz ou como script isolado
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from src.llm.prompts import montar_prompt_simplificacao, BulaSimplificada
+
+RAIZ = Path(__file__).resolve().parents[2]
+MODELO_PADRAO = "gemini-2.5-flash"
+ENTRADA_PADRAO = "resultados/bula_extraida.txt"
+SAIDA_PADRAO = "resultados/resultado_gemini.json"
+
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")
+
+
+def caminho(valor: str) -> Path:
+    p = Path(valor)
+    return p if p.is_absolute() else RAIZ / p
+
+
+def carregar_env() -> None:
+    """Lê o .env da raiz sem sobrescrever variáveis já definidas no ambiente."""
+    arquivo = RAIZ / ".env"
+    if not arquivo.exists():
+        return
+
+    for linha in arquivo.read_text(encoding="utf-8").splitlines():
+        linha = linha.strip()
+        if not linha or linha.startswith("#") or "=" not in linha:
+            continue
+        chave, _, valor = linha.partition("=")
+        chave = chave.strip()
+        valor = valor.strip().strip('"').strip("'")
+        if chave and chave not in os.environ:
+            os.environ[chave] = valor
+
+
+def reconstruir_bula_com_gemini(
+    modelo: str = MODELO_PADRAO,
+    arquivo_ocr: str = ENTRADA_PADRAO,
+    arquivo_saida: str = SAIDA_PADRAO,
+) -> str | None:
+    carregar_env()
+    chave_api = os.environ.get("GEMINI_API_KEY", "").strip()
+
+    if not chave_api:
+        print(
+            "Erro: defina GEMINI_API_KEY no ambiente ou no arquivo .env da raiz "
+            "(copie .env.example para .env)."
+        )
         return None
 
+    caminho_ocr = caminho(arquivo_ocr)
+    if not caminho_ocr.exists():
+        print(f"Arquivo '{caminho_ocr}' não encontrado. Execute o OCR primeiro.")
+        return None
+
+    texto_bula = caminho_ocr.read_text(encoding="utf-8")
+    if not texto_bula.strip():
+        print(f"Arquivo '{caminho_ocr}' está vazio.")
+        return None
+
+    print(f"Enviando texto para o modelo '{modelo}' usando o prompt centralizado...")
+
     try:
-        client = genai.Client(api_key=CHAVE_API)
-
+        client = genai.Client(api_key=chave_api)
         resposta = client.models.generate_content(
-            model="gemini-3.5-flash",
-            contents=prompt
+            model=modelo,
+            contents=montar_prompt_simplificacao(texto_bula),
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=BulaSimplificada,
+                temperature=0.1,  # Baixa temperatura para minimizar alucinações
+            ),
         )
-
     except Exception as e:
         print(f"Erro ao se comunicar com o Gemini: {e}")
         return None
 
-    texto_resposta = resposta.text
+    texto_resposta = (resposta.text or "").strip()
+    if not texto_resposta:
+        print("O Gemini retornou uma resposta vazia.")
+        return None
 
-    nome_arquivo = "resultados/resultado_gemini.txt"
+    try:
+        json_obj = json.loads(texto_resposta)
+        texto_resposta = json.dumps(json_obj, ensure_ascii=False, indent=2)
+    except json.JSONDecodeError:
+        print("Aviso: O modelo não retornou um JSON válido.")
 
-    with open(nome_arquivo, "w", encoding="utf-8") as f:
-        f.write(texto_resposta)
+    destino = caminho(arquivo_saida)
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    destino.write_text(texto_resposta, encoding="utf-8")
 
-    print(f"Resultado salvo em '{nome_arquivo}'")
-
+    print(f"Resultado salvo em '{destino}'")
     return texto_resposta
 
 
+def main() -> int:
+    carregar_env()
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--modelo",
+        default=os.environ.get("GEMINI_MODEL", MODELO_PADRAO),
+        help=f"ID do modelo Gemini. Padrão: {MODELO_PADRAO} (ou GEMINI_MODEL).",
+    )
+    parser.add_argument("--entrada", default=ENTRADA_PADRAO, help="Texto extraído pelo OCR.")
+    parser.add_argument("--saida", default=SAIDA_PADRAO, help="Arquivo de saída (JSON).")
+    args = parser.parse_args()
+
+    resultado = reconstruir_bula_com_gemini(args.modelo, args.entrada, args.saida)
+
+    if not resultado:
+        return 1
+
+    print("\n===== BULA SIMPLIFICADA E ESTRUTURADA (JSON) =====\n")
+    print(resultado)
+    return 0
+
+
 if __name__ == "__main__":
-
-    resultado = reconstruir_bula_com_gemini()
-
-    if resultado:
-        print("\n===== TEXTO RECONSTRUÍDO PELO GEMINI =====\n")
-        print(resultado)
+    raise SystemExit(main())
