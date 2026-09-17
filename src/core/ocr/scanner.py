@@ -5,9 +5,7 @@ Exemplos:
     python src/ocr/bula.py --imagem dados/entrada/outra_bula.jpeg --colunas 3
 """
 
-import argparse
 import os
-import sys
 from pathlib import Path
 
 # cv2 (OpenCV) é usado para manipulação avançada de imagens (redimensionamento, conversão de cores).
@@ -18,13 +16,7 @@ import easyocr
 import numpy as np
 
 RAIZ = Path(__file__).resolve().parents[2]
-IMAGEM_PADRAO = "dados/entrada/bula_teste.jpeg"
-SAIDA_PADRAO = "resultados/bula_extraida.txt"
-PASTA_DEBUG = "dados/processadas"
 
-# Força o encoding do stdout para utf-8, evitando erros de caracteres (ex: acentos) no terminal do Windows.
-if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
-    sys.stdout.reconfigure(encoding="utf-8")
 
 
 def caminho(*partes: str) -> Path:
@@ -134,54 +126,3 @@ def escanear_bula(caminho_imagem, colunas=2, salvar_debug=True, reader=None) -> 
     # Une os blocos extraídos separados por duas quebras de linha para manter a hierarquia
     return "\n\n".join(textos).strip()
 
-
-def main() -> int:
-    # argparse permite chamar este script pela linha de comando passando argumentos (ex: --imagem bula.jpg)
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--imagem", default=IMAGEM_PADRAO, help="Foto da bula.")
-    parser.add_argument("--saida", default=SAIDA_PADRAO, help="Arquivo de saída do texto.")
-    parser.add_argument("--colunas", type=int, default=2, help="Faixas verticais da imagem.")
-    parser.add_argument(
-        "--psm", 
-        type=int, 
-        default=4, 
-        help="Mantido por retrocompatibilidade (ignorado pelo EasyOCR)."
-    )
-    parser.add_argument(
-        "--sem-debug",
-        action="store_true",
-        help=f"Não salva as imagens pré-processadas em {PASTA_DEBUG}/.",
-    )
-    args = parser.parse_args()
-
-    try:
-        print("Inicializando o EasyOCR...")
-        # Instancia o modelo na inicialização para reutilizar dentro do laço de fatiamento
-        reader = easyocr.Reader(['pt'])
-
-        print("Iniciando o OCR da bula (sem pós-processamento)...")
-        texto = escanear_bula(
-            args.imagem,
-            colunas=args.colunas,
-            salvar_debug=not args.sem_debug,
-            reader=reader
-        )
-
-        print("\n--- TEXTO EXTRAÍDO ---")
-        print(texto)
-
-        destino = caminho(args.saida)
-        # mkdir com parents=True garante que todas as subpastas no caminho sejam criadas caso não existam
-        destino.parent.mkdir(parents=True, exist_ok=True)
-        destino.write_text(texto, encoding="utf-8")
-        print(f"\nTexto original salvo em '{destino}'")
-
-    except Exception as e:
-        print(f"Erro ao processar: {e}")
-        return 1
-
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

@@ -8,7 +8,6 @@ Exemplo:
     python src/llm/comparar_llm_gemini.py
 """
 
-import argparse
 import os
 import sys
 import json
@@ -17,11 +16,9 @@ from pathlib import Path
 from google import genai
 from google.genai import types
 
-# Importa o novo módulo de prompts compartilhado
-# sys.path.insert(0, ...) garante que o Python encontre a pasta "src" como um módulo raiz,
-# permitindo que importemos o pacote local (src.llm.prompts) mesmo executando este script isoladamente do terminal.
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from src.llm.prompts import montar_prompt_simplificacao, BulaSimplificada
+# O pyproject.toml cuida de colocar src no PYTHONPATH.
+from src.core.llm.prompts import montar_prompt_simplificacao
+from src.core.modelos.bula import BulaSimplificada
 
 RAIZ = Path(__file__).resolve().parents[2]
 MODELO_PADRAO = "gemini-2.5-flash"
@@ -121,28 +118,3 @@ def reconstruir_bula_com_gemini(
     print(f"Resultado salvo em '{destino}'")
     return texto_resposta
 
-
-def main() -> int:
-    carregar_env()
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument(
-        "--modelo",
-        default=os.environ.get("GEMINI_MODEL_GERADOR", MODELO_PADRAO),
-        help=f"ID do modelo Gemini. Padrão: {MODELO_PADRAO} (ou GEMINI_MODEL_GERADOR).",
-    )
-    parser.add_argument("--entrada", default=ENTRADA_PADRAO, help="Texto extraído pelo OCR.")
-    parser.add_argument("--saida", default=SAIDA_PADRAO, help="Arquivo de saída (JSON).")
-    args = parser.parse_args()
-
-    resultado = reconstruir_bula_com_gemini(args.modelo, args.entrada, args.saida)
-
-    if not resultado:
-        return 1
-
-    print("\n===== BULA SIMPLIFICADA E ESTRUTURADA (JSON) =====\n")
-    print(resultado)
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

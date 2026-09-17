@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
+from src.core.modelos.bula import BulaSimplificada
 
 # O Pydantic é o motor de validação de dados por trás do FastAPI.
 # Ao definirmos classes herdando de BaseModel, o FastAPI automaticamente:

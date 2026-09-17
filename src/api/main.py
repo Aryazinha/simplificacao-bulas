@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 # pyrefly: ignore [missing-import]
 import easyocr
 
-from src.api.utils.config import settings
+from src.core.config import settings
 from src.api.routers import bula
 from src.api.utils.logger import get_logger
 

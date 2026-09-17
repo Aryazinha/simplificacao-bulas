@@ -8,7 +8,8 @@ from google import genai
 from google.genai import types
 
 from src.api.utils.logger import get_logger
-from src.llm.prompts import montar_prompt_simplificacao, BulaSimplificada
+from src.core.llm.prompts import montar_prompt_simplificacao
+from src.core.modelos.bula import BulaSimplificada
 
 logger = get_logger("LLM_Service")
 

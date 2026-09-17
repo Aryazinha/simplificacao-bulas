@@ -7,8 +7,8 @@ import easyocr
 from pathlib import Path
 
 from src.api.utils.logger import get_logger
-from src.ocr.bula import escanear_bula
-from src.api.utils.config import settings
+from src.core.ocr.scanner import escanear_bula
+from src.core.config import settings
 
 logger = get_logger("OCR_Service")
 

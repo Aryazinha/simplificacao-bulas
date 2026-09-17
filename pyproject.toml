@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bula_ocr"
+version = "0.1.0"
+description = "Simplificação de Bulas de Medicamentos via OCR e LLM"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "python-multipart",
+    "easyocr",
+    "opencv-python",
+    "numpy",
+    "google-genai",
+    "pydantic",
+    "pytest",
+    "textstat"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
