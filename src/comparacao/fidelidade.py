@@ -40,7 +40,7 @@ class EmbeddingService:
             try:
                 self.client = genai.Client(api_key=api_key)
                 # Teste rápido para validar chave e modelo
-                self.client.models.embed_content(model="models/embedding-001", contents="teste")
+                self.client.models.embed_content(model="models/gemini-embedding-001", contents="teste")
             except Exception as e:
                 print(f"\nAviso: Falha na API Gemini ({e}). Fazendo fallback para backend local.")
                 self.use_local = True
@@ -68,13 +68,14 @@ class EmbeddingService:
         else:
             try:
                 resp = self.client.models.embed_content(
-                    model="models/embedding-001", 
+                    model="models/gemini-embedding-001", 
                     contents=texto
                 )
                 return resp.embeddings[0].values
             except Exception as e:
                 if not self.use_local:
-                    print(f"\nErro em tempo de execução no Gemini ({e}). Migrando para fallback local.")
+                    print(f"\n[ALERTA CRÍTICO] Falha na API Gemini durante a extração de embeddings ({e}).")
+                    print("--> FALLBACK ATIVADO: Migrando para o modelo local (sentence-transformers) para o restante da execução!")
                     self.use_local = True
                     self._init_local_model()
                 return self.local_model.encode(texto).tolist()

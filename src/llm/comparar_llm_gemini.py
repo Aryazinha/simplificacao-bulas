@@ -119,8 +119,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "--modelo",
-        default=os.environ.get("GEMINI_MODEL", MODELO_PADRAO),
-        help=f"ID do modelo Gemini. Padrão: {MODELO_PADRAO} (ou GEMINI_MODEL).",
+        default=os.environ.get("GEMINI_MODEL_GERADOR", MODELO_PADRAO),
+        help=f"ID do modelo Gemini. Padrão: {MODELO_PADRAO} (ou GEMINI_MODEL_GERADOR).",
     )
     parser.add_argument("--entrada", default=ENTRADA_PADRAO, help="Texto extraído pelo OCR.")
     parser.add_argument("--saida", default=SAIDA_PADRAO, help="Arquivo de saída (JSON).")

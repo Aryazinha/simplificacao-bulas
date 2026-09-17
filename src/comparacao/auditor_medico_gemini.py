@@ -10,11 +10,14 @@ try:
 except ImportError:
     pass
 
-def auditar_texto_medico(texto_original: str, texto_simplificado: str, modelo: str = "gemini-3.6-flash") -> dict:
+def auditar_texto_medico(texto_original: str, texto_simplificado: str, modelo: str = None) -> dict:
     """
     Usa a API do Gemini para atuar como Auditor Médico Independente.
     Avalia se a simplificação do texto manteve a fidelidade clínica.
     """
+    if modelo is None:
+        modelo = os.getenv("GEMINI_MODEL_AUDITOR", "gemini-3.6-flash")
+
     
     # Inicializa o cliente do Gemini. Ele pega automaticamente a chave GEMINI_API_KEY do ambiente.
     api_key = os.getenv("GEMINI_API_KEY")
